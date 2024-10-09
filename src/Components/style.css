@@ -19,7 +19,7 @@ body{
 .left-content{
     display: grid;
     grid-template-columns: repeat(auto-fit,minmax(200px,0.5fr));
-    grid-gap:2rem;
+    grid-gap: 20px;
 }
 .card{
     width: 300px;
