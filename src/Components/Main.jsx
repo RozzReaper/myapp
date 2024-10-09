@@ -91,6 +91,7 @@ const Main = () => {
 
     return (
         <>
+            <div className="title">Pokémon API</div>
             <div className="container">
                 <div className="left-section">
                     <div className="left-content">
