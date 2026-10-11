@@ -13,11 +13,9 @@ const Pokeinfo = ({ data }) => {
                         {
                             data.abilities.map(poke=>{
                                 return(
-                                    <>
-                                     <div className="group">
+                                     <div className="group" key={poke.ability.name}>
                                         <h2>{poke.ability.name}</h2>
                                     </div>
-                                    </>
                                 )
                             })
                         }
@@ -26,9 +24,7 @@ const Pokeinfo = ({ data }) => {
                         {
                             data.stats.map(poke=>{
                                 return(
-                                    <>
-                                        <h3>{poke.stat.name}:{poke.base_stat}</h3>
-                                    </>
+                                        <h3 key={poke.stat.name}>{poke.stat.name}:{poke.base_stat}</h3>
                                 )
                             })
                         }

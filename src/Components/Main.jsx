@@ -3,54 +3,67 @@ import Card from "./Card";
 import Pokeinfo from "./Pokeinfo";
 import axios from "axios";
 
+const itemsPerPage = 9;
+const pokemonUrl = "https://pokeapi.co/api/v2/pokemon/";
+
 const Main = () => {
     const [pokeData, setPokeData] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [url, setUrl] = useState("https://pokeapi.co/api/v2/pokemon/");
-    const [nextUrl, setNextUrl] = useState();
-    const [prevUrl, setPrevUrl] = useState();
     const [pokeDex, setPokeDex] = useState();
     const [currentPage, setCurrentPage] = useState(1);
-    const itemsPerPage = 9; // Mostrar 9 cartas por página
-    const totalItems = 1300; // Ajusta esto según la cantidad total de Pokémon disponibles
-    const totalPages = Math.ceil(totalItems / itemsPerPage);
-
-    const pokeFun = async () => {
-        setLoading(true);
-        const res = await axios.get(`${url}?limit=${itemsPerPage}&offset=${(currentPage - 1) * itemsPerPage}`);
-        setNextUrl(res.data.next);
-        setPrevUrl(res.data.previous);
-        getPokemon(res.data.results);
-        setLoading(false);
-    };
-
-    const getPokemon = async (res) => {
-        res.map(async (item) => {
-            const result = await axios.get(item.url);
-            setPokeData((state) => {
-                state = [...state, result.data];
-                state.sort((a, b) => (a.id > b.id ? 1 : -1));
-                return state;
-            });
-        });
-    };
+    const [totalItems, setTotalItems] = useState(0);
+    const [error, setError] = useState("");
+    const totalPages = Math.max(1, Math.ceil(totalItems / itemsPerPage));
 
     useEffect(() => {
-        setPokeData([]); 
+        let active = true;
+
+        const pokeFun = async () => {
+            setLoading(true);
+            setError("");
+            setPokeData([]);
+
+            try {
+                const res = await axios.get(
+                    `${pokemonUrl}?limit=${itemsPerPage}&offset=${(currentPage - 1) * itemsPerPage}`
+                );
+                const pokemon = await Promise.all(
+                    res.data.results.map(async (item) => {
+                        const result = await axios.get(item.url);
+                        return result.data;
+                    })
+                );
+
+                if (active) {
+                    setTotalItems(res.data.count);
+                    setPokeData(pokemon.sort((a, b) => a.id - b.id));
+                }
+            } catch (err) {
+                if (active) {
+                    setError("Unable to load Pokémon. Please try again.");
+                }
+            } finally {
+                if (active) {
+                    setLoading(false);
+                }
+            }
+        };
+
         pokeFun();
-    }, [url, currentPage]); // Añadir currentPage como dependencia
+        return () => {
+            active = false;
+        };
+    }, [currentPage]);
 
     const handleNext = () => {
-        if (nextUrl) {
-            setUrl(nextUrl);
-            setCurrentPage((prevPage) => Math.min(prevPage + 1, totalPages));
+        if (!loading && currentPage < totalPages) {
+            setCurrentPage((page) => page + 1);
         }
     };
 
     const handlePrevious = () => {
-        if (prevUrl) {
-            setUrl(prevUrl);
-            setCurrentPage((prevPage) => Math.max(prevPage - 1, 1));
+        if (!loading && currentPage > 1) {
+            setCurrentPage((page) => page - 1);
         }
     };
 
@@ -73,15 +86,18 @@ const Main = () => {
             pageNumbers.push(i);
         }
 
-        pageNumbers.push(totalPages); // Siempre mostrar la última página
+        if (totalPages > 1) {
+            pageNumbers.push(totalPages); // Siempre mostrar la última página
+        }
 
         return pageNumbers.map((number) => (
             <span
                 key={number}
                 className={number === currentPage ? "active-page" : ""}
                 onClick={() => {
-                    setUrl(`https://pokeapi.co/api/v2/pokemon/?offset=${(number - 1) * itemsPerPage}&limit=${itemsPerPage}`);
-                    setCurrentPage(number);
+                    if (!loading) {
+                        setCurrentPage(number);
+                    }
                 }}
             >
                 {number}
@@ -95,12 +111,13 @@ const Main = () => {
             <div className="container">
                 <div className="left-section">
                     <div className="left-content">
+                        {error && <p role="alert">{error}</p>}
                         <Card pokemon={pokeData} loading={loading} infoPokemon={(poke) => setPokeDex(poke)} />
                     </div>
                     <div className="pagination">
-                        <button onClick={handlePrevious} disabled={currentPage === 1}>Previous</button>
+                        <button onClick={handlePrevious} disabled={loading || currentPage === 1}>Previous</button>
                         {renderPageNumbers()}
-                        <button onClick={handleNext} disabled={currentPage === totalPages}>Next</button>
+                        <button onClick={handleNext} disabled={loading || currentPage === totalPages}>Next</button>
                     </div>
                 </div>
                 <div className="right-content">
